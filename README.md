@@ -6,11 +6,14 @@ Servidor HTTP en Docker que expone el contenido del manual de Linux (`man`) en t
 
 - `GET /man/<comando>`
 - `GET /cat/<comando>`
+- `GET /man/<seccion>/<comando>`
+- `GET /health`
 
 Ejemplo:
 
 ```bash
 curl http://localhost:8080/man/ls
+curl http://localhost:8080/man/5/passwd
 ```
 
 ---
@@ -98,4 +101,6 @@ curl https://<TU-APP-RENDER>/man/ls
 ## Notas
 
 - El servidor valida el nombre del comando para evitar inyección.
+- El servidor valida también la sección de `man`.
+- Se usa caché en memoria para acelerar consultas repetidas.
 - Si el manual no existe, devuelve `404` con mensaje JSON.

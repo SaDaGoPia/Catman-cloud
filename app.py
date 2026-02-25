@@ -1,23 +1,34 @@
 import re
 import subprocess
+from functools import lru_cache
 from flask import Flask, Response, jsonify
 
 app = Flask(__name__)
 
 _VALID_CMD = re.compile(r"^[a-zA-Z0-9._+-]+$")
+_VALID_SECTION = re.compile(r"^[0-9a-zA-Z]+$")
 
 
-def _man_text(command: str):
+@lru_cache(maxsize=256)
+def _man_text(command: str, section: str | None = None):
     if not _VALID_CMD.match(command):
         return None, "Comando inválido"
+    if section is not None and not _VALID_SECTION.match(section):
+        return None, "Sección inválida"
+
+    man_args = ["man"]
+    if section is not None:
+        man_args.append(section)
+    man_args.append(command)
 
     proc = subprocess.run(
-        ["man", command],
+        man_args,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
-        errors="replace"
+        errors="replace",
+        timeout=8
     )
 
     if proc.returncode != 0:
@@ -42,19 +53,42 @@ def _man_text(command: str):
 @app.get("/")
 def home():
     return jsonify({
-        "service": "cloud-man",
+        "service": "catman-cloud",
+        "status": "ok",
         "usage": [
             "GET /man/<comando>",
-            "GET /cat/<comando>"
+            "GET /cat/<comando>",
+            "GET /man/<seccion>/<comando>",
+            "GET /health"
+        ],
+        "examples": [
+            "/man/ls",
+            "/man/5/passwd",
+            "/cat/bash"
         ]
     })
+
+
+@app.get("/health")
+def health():
+    return jsonify({"status": "ok"})
 
 
 @app.get("/man/<command>")
 def man_page(command: str):
     content, err = _man_text(command)
     if err:
-        return jsonify({"error": err}), 404
+        status = 400 if err in {"Comando inválido", "Sección inválida"} else 404
+        return jsonify({"error": err}), status
+    return Response(content, mimetype="text/plain; charset=utf-8")
+
+
+@app.get("/man/<section>/<command>")
+def man_page_section(section: str, command: str):
+    content, err = _man_text(command, section)
+    if err:
+        status = 400 if err in {"Comando inválido", "Sección inválida"} else 404
+        return jsonify({"error": err}), status
     return Response(content, mimetype="text/plain; charset=utf-8")
 
 
@@ -62,7 +96,8 @@ def man_page(command: str):
 def cat_page(command: str):
     content, err = _man_text(command)
     if err:
-        return jsonify({"error": err}), 404
+        status = 400 if err in {"Comando inválido", "Sección inválida"} else 404
+        return jsonify({"error": err}), status
     return Response(content, mimetype="text/plain; charset=utf-8")
 
 
