@@ -75,6 +75,18 @@ Puedes usar cualquier servicio que acepte Dockerfile, por ejemplo:
 - Fly.io
 - Google Cloud Run
 
+### Deploy rápido en Render
+
+1. Entra a Render y conecta tu GitHub.
+2. Selecciona el repositorio `SaDaGoPia/Catman-cloud`.
+3. Render detectará `render.yaml` y creará el servicio web automáticamente.
+4. Espera el primer build y abre la URL pública.
+5. Prueba con:
+
+```bash
+curl https://<TU-APP-RENDER>/man/ls
+```
+
 ### Parámetros mínimos
 
 - Puerto: `8080`
