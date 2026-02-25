@@ -12,9 +12,9 @@ _VALID_SECTION = re.compile(r"^[0-9a-zA-Z]+$")
 @lru_cache(maxsize=256)
 def _man_text(command: str, section: str | None = None):
     if not _VALID_CMD.match(command):
-        return None, "Comando inválido"
+        return None, "Invalid command"
     if section is not None and not _VALID_SECTION.match(section):
-        return None, "Sección inválida"
+        return None, "Invalid section"
 
     man_args = ["man"]
     if section is not None:
@@ -32,7 +32,7 @@ def _man_text(command: str, section: str | None = None):
     )
 
     if proc.returncode != 0:
-        return None, proc.stderr.strip() or f"No se encontró manual para: {command}"
+        return None, proc.stderr.strip() or f"Manual page not found for: {command}"
 
     clean = subprocess.run(
         ["col", "-b"],
@@ -45,7 +45,7 @@ def _man_text(command: str, section: str | None = None):
     )
 
     if clean.returncode != 0:
-        return None, clean.stderr.strip() or "Error limpiando formato del manual"
+        return None, clean.stderr.strip() or "Error while cleaning manual page formatting"
 
     return clean.stdout, None
 
@@ -56,9 +56,9 @@ def home():
         "service": "catman-cloud",
         "status": "ok",
         "usage": [
-            "GET /man/<comando>",
-            "GET /cat/<comando>",
-            "GET /man/<seccion>/<comando>",
+            "GET /man/<command>",
+            "GET /cat/<command>",
+            "GET /man/<section>/<command>",
             "GET /health"
         ],
         "examples": [
@@ -78,7 +78,7 @@ def health():
 def man_page(command: str):
     content, err = _man_text(command)
     if err:
-        status = 400 if err in {"Comando inválido", "Sección inválida"} else 404
+        status = 400 if err in {"Invalid command", "Invalid section"} else 404
         return jsonify({"error": err}), status
     return Response(content, mimetype="text/plain; charset=utf-8")
 
@@ -87,7 +87,7 @@ def man_page(command: str):
 def man_page_section(section: str, command: str):
     content, err = _man_text(command, section)
     if err:
-        status = 400 if err in {"Comando inválido", "Sección inválida"} else 404
+        status = 400 if err in {"Invalid command", "Invalid section"} else 404
         return jsonify({"error": err}), status
     return Response(content, mimetype="text/plain; charset=utf-8")
 
@@ -96,7 +96,7 @@ def man_page_section(section: str, command: str):
 def cat_page(command: str):
     content, err = _man_text(command)
     if err:
-        status = 400 if err in {"Comando inválido", "Sección inválida"} else 404
+        status = 400 if err in {"Invalid command", "Invalid section"} else 404
         return jsonify({"error": err}), status
     return Response(content, mimetype="text/plain; charset=utf-8")
 
